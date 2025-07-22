@@ -409,4 +409,76 @@ async def advanced_search(search_request: AdvancedSearchRequest):
         ai_analysis = None
         if OPENAI_API_KEY:
             ai_analysis = await get_ai_analysis(
-                search_request.query
+                search_request.query,
+                results,
+                search_request.dict()
+            )
+        
+        response = SearchResponse(
+            query=search_request.query,
+            results=results,
+            total=len(results),
+            ai_explanation=ai_analysis,
+            search_params=search_request.dict(),
+            timestamp=datetime.utcnow(),
+            status="success"
+        )
+        
+        logger.info(f"Search completed: {len(results)} results found")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+@app.get("/api/courts")
+async def get_courts():
+    """Get available courts and daireler"""
+    return {
+        "courts": COURT_TYPES,
+        "yargitay_daireler": YARGITAY_DAIRELER,
+        "danistay_daireler": DANISTAY_DAIRELER,
+        "total_courts": len(COURT_TYPES),
+        "total_daireler": len(YARGITAY_DAIRELER) + len(DANISTAY_DAIRELER)
+    }
+
+@app.get("/api/tools")
+async def get_mcp_tools():
+    """Get available MCP tools info"""
+    return {
+        "available_tools": [
+            "search_bedesten_unified",
+            "get_bedesten_document_markdown", 
+            "search_emsal_detailed_decisions",
+            "get_emsal_document_markdown",
+            "search_uyusmazlik_decisions",
+            "get_uyusmazlik_document_markdown_from_url",
+            "search_anayasa_unified",
+            "get_anayasa_document_unified",
+            "search_kik_decisions",
+            "get_kik_document_markdown",
+            "search_rekabet_kurumu_decisions",
+            "get_rekabet_kurumu_document",
+            "search_sayistay_genel_kurul",
+            "search_sayistay_temyiz_kurulu", 
+            "search_sayistay_daire",
+            "get_sayistay_genel_kurul_document_markdown",
+            "get_sayistay_temyiz_kurulu_document_markdown",
+            "get_sayistay_daire_document_markdown",
+            "search_kvkk_decisions",
+            "get_kvkk_document_markdown",
+            "search_bddk_decisions",
+            "get_bddk_document_markdown"
+        ],
+        "total_tools": 21,
+        "optimized_features": {
+            "token_reduction": "61.8%",
+            "court_filtering": "79 options",
+            "date_filtering": "ISO 8601 format",
+            "exact_phrase_search": True
+        }
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
