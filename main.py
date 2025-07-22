@@ -32,9 +32,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files and templates
-app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
-templates = Jinja2Templates(directory="frontend/templates")
+# Static files and templates (fixed paths)
+# app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 # Configuration
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "https://yargi-mcp.botfusions.com")
@@ -430,6 +430,49 @@ async def advanced_search(search_request: AdvancedSearchRequest):
     except Exception as e:
         logger.error(f"Search error: {e}")
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+# Simple search endpoint for backward compatibility
+@app.post("/api/search-simple")
+async def simple_search(query: str):
+    """Simple search endpoint for existing frontend"""
+    try:
+        # Create simple request
+        search_request = AdvancedSearchRequest(
+            query=query,
+            courts=["yargitay", "danistay"],
+            limit=5
+        )
+        
+        # Use advanced search
+        results = await mcp_client.search_advanced(search_request)
+        
+        # Format for simple response
+        simple_results = []
+        for result in results:
+            simple_results.append({
+                "title": result.title,
+                "court": result.court,
+                "date": result.date,
+                "summary": result.summary,
+                "source": result.source
+            })
+        
+        return {
+            "query": query,
+            "results": simple_results,
+            "total": len(simple_results),
+            "status": "success"
+        }
+        
+    except Exception as e:
+        logger.error(f"Simple search error: {e}")
+        return {
+            "query": query,
+            "results": [],
+            "total": 0,
+            "status": "error",
+            "message": str(e)
+        }
 
 @app.get("/api/courts")
 async def get_courts():
