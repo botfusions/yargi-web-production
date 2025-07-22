@@ -18,6 +18,7 @@ from datetime import datetime
     check_mcp_health,
     MCPClient
 )
+)
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
