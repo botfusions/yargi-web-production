@@ -187,7 +187,7 @@ class MCPClient:
                 "id": 3,
                 "params": {
                     "name": "search_yargitay_detailed",
-                    "arguments": arguments
+                    "arguments": {"arananKelime": query}
                 }
             }
             
