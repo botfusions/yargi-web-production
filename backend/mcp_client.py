@@ -97,8 +97,7 @@ class MCPClient:
             # Prepare arguments for search_bedesten_unified
             arguments = {
                 "phrase": query,
-                "limit": limit
-            }
+                 }
             
             # Add court types if specified
             if court_types:
