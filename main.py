@@ -11,14 +11,13 @@ import os
 from datetime import datetime
 
 # Import our fixed MCP client
-from mcp_client import (
+from backend.mcp_client import (
     search_legal_unified, 
     search_yargitay_only,
     get_mcp_tools,
     check_mcp_health,
     MCPClient
 )
-
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
