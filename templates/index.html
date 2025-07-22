@@ -318,13 +318,12 @@
             
             try {
                 // Make API request to search-simple endpoint
-                const response = await fetch('/api/search-simple', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `query=${encodeURIComponent(query)}`
-                });
+                const response = await fetch(`/api/search-simple?query=${encodeURIComponent(query)}`, {
+                  method: 'POST',
+                 headers: {
+                    'Accept': 'application/json'
+                      }
+                 });
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
