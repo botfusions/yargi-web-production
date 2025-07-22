@@ -32,7 +32,7 @@ class MCPClient:
         try:
             headers = {
                 "Content-Type": "application/json",
-                "Accept": "application/json, text/event-stream",
+                "Accept": "application/json,text/event-stream",
                 "Authorization": "Bearer mock_clerk_jwt_development_token_12345"
             }
             
@@ -89,7 +89,7 @@ class MCPClient:
         try:
             headers = {
                 "Content-Type": "application/json",
-                "Accept": "application/json, text/event-stream",
+                "Accept": "application/json,text/event-stream",
                 "Authorization": "Bearer mock_clerk_jwt_development_token_12345",
                 "Mcp-Session-Id": self.session_id
             }
@@ -169,7 +169,7 @@ class MCPClient:
         try:
             headers = {
                 "Content-Type": "application/json",
-                "Accept": "application/json, text/event-stream",
+                "Accept": "application/json,text/event-stream",
                 "Authorization": "Bearer mock_clerk_jwt_development_token_12345",
                 "Mcp-Session-Id": self.session_id
             }
