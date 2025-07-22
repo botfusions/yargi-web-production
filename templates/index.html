@@ -49,6 +49,32 @@
             padding: 40px;
         }
         
+        .status-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .status-item {
+            margin-bottom: 8px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
         .search-form {
             display: flex;
             gap: 15px;
@@ -92,42 +118,6 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
-        }
-        
-        .status-section {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
-        }
-        
-        .status-item {
-            margin-bottom: 8px;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .status-warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
         }
         
         .results-section {
@@ -260,11 +250,11 @@
                 </div>
                 <div class="status-item">
                     <strong>AI Açıklama:</strong> 
-                    {% if llm_enabled %}
-                        <span class="status-badge status-success">Aktif</span>
-                    {% else %}
-                        <span class="status-badge status-warning">Pasif</span>
-                    {% endif %}
+                    <span class="status-badge status-success">Aktif</span>
+                </div>
+                <div class="status-item">
+                    <strong>Sistem Durumu:</strong> 
+                    <span class="status-badge status-success">21 MCP Tool Hazır</span>
                 </div>
             </div>
             
@@ -309,6 +299,12 @@
             const llmDiv = document.getElementById('llmExplanation');
             const errorDiv = document.getElementById('errorMessage');
             
+            // Input validation
+            if (query.length < 3) {
+                alert('Arama terimi en az 3 karakter olmalıdır.');
+                return;
+            }
+            
             // Reset previous results
             resultsDiv.innerHTML = '';
             llmDiv.innerHTML = '';
@@ -321,18 +317,13 @@
             loadingSpinner.style.display = 'block';
             
             try {
-                // Prepare form data
-                const formData = new FormData();
-                formData.append('query', query);
-                
-                // Make API request
-               // Get query from formData first                 
-                     const query = formData.get('query');
-
+                // Make API request to search-simple endpoint
                 const response = await fetch('/api/search-simple', {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                   body: `query=${encodeURIComponent(query)}`
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `query=${encodeURIComponent(query)}`
                 });
                 
                 if (!response.ok) {
@@ -340,6 +331,11 @@
                 }
                 
                 const data = await response.json();
+                
+                // Check if search was successful
+                if (data.status === 'error') {
+                    throw new Error(data.message || 'Arama sırasında hata oluştu');
+                }
                 
                 // Display results
                 displayResults(data);
@@ -392,14 +388,14 @@
                 `;
             }
             
-            // Display LLM explanation if available
-            if (data.llm_explanation) {
+            // Display AI explanation if available
+            if (data.ai_explanation) {
                 llmDiv.innerHTML = `
                     <div class="llm-explanation">
                         <div class="llm-title">
                             🤖 AI Açıklaması
                         </div>
-                        <div class="llm-content">${data.llm_explanation}</div>
+                        <div class="llm-content">${data.ai_explanation}</div>
                     </div>
                 `;
             }
