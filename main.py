@@ -123,10 +123,12 @@ DANISTAY_DAIRELER = {
 }
 
 # MCP Client
+# main.py'daki MCPClient class'ını bu şekilde değiştir:
+
 class MCPClient:
     def __init__(self):
         self.base_url = MCP_SERVER_URL
-        self.session_id = None
+        self.session_id = "mock_session_12345"  # Default session ID
         
     async def initialize_session(self):
         """Initialize MCP session"""
@@ -142,23 +144,36 @@ class MCPClient:
                 }
             }
             
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": "Bearer mock_clerk_jwt_development_token_12345",
+                "X-Session-ID": self.session_id
+            }
+            
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{self.base_url}/mcp/",
                     json=init_payload,
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer mock_clerk_jwt_development_token_12345"
-                    },
+                    headers=headers,
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as response:
+                    
+                    response_text = await response.text()
+                    logger.info(f"MCP init response ({response.status}): {response_text}")
+                    
                     if response.status == 200:
-                        self.session_id = response.headers.get('mcp-session-id', 'mock_session_12345')
-                        logger.info("MCP session initialized successfully")
+                        # Try to get session ID from headers
+                        new_session_id = response.headers.get('mcp-session-id')
+                        if new_session_id:
+                            self.session_id = new_session_id
+                            
+                        logger.info(f"MCP session initialized successfully with ID: {self.session_id}")
                         return True
                     else:
-                        logger.error(f"MCP initialization failed: {response.status}")
+                        logger.error(f"MCP initialization failed: {response.status} - {response_text}")
                         return False
+                        
         except Exception as e:
             logger.error(f"MCP initialization error: {e}")
             return False
@@ -166,10 +181,17 @@ class MCPClient:
     async def search_advanced(self, search_request: AdvancedSearchRequest) -> List[LegalResult]:
         """Advanced MCP search with all parameters"""
         try:
+            # Always ensure we have a session
             if not self.session_id:
-                await self.initialize_session()
+                self.session_id = "mock_session_12345"
             
-            # Prepare search phrase (exact phrase if requested)
+            # Try to initialize if not done
+            session_ok = await self.initialize_session()
+            if not session_ok:
+                logger.warning("MCP initialization failed, using fallback")
+                return self.fallback_results(search_request.query)
+            
+            # Prepare search phrase
             search_phrase = search_request.query
             if search_request.exact_phrase:
                 search_phrase = f'"{search_phrase}"'
@@ -189,34 +211,49 @@ class MCPClient:
                 }
             }
             
-            # Add optional parameters
-            if search_request.daire:
+            # Add optional parameters only if they exist
+            if search_request.daire and search_request.daire.strip():
                 search_payload["params"]["arguments"]["birimAdi"] = search_request.daire
                 
-            if search_request.start_date:
+            if search_request.start_date and search_request.start_date.strip():
                 search_payload["params"]["arguments"]["kararTarihiStart"] = f"{search_request.start_date}T00:00:00.000Z"
                 
-            if search_request.end_date:
+            if search_request.end_date and search_request.end_date.strip():
                 search_payload["params"]["arguments"]["kararTarihiEnd"] = f"{search_request.end_date}T23:59:59.000Z"
+            
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json", 
+                "Authorization": "Bearer mock_clerk_jwt_development_token_12345"
+            }
+            
+            # Add session ID only if it exists and is not None
+            if self.session_id and self.session_id != "None":
+                headers["X-Session-ID"] = self.session_id
+            
+            logger.info(f"Making MCP search call for: {search_phrase}")
             
             # Make MCP call
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{self.base_url}/mcp/",
                     json=search_payload,
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer mock_clerk_jwt_development_token_12345",
-                        "mcp-session-id": self.session_id
-                    },
+                    headers=headers,
                     timeout=aiohttp.ClientTimeout(total=45)
                 ) as response:
                     
+                    response_text = await response.text()
+                    logger.info(f"MCP search response ({response.status}): {response_text[:500]}...")
+                    
                     if response.status == 200:
-                        data = await response.json()
-                        return self.parse_mcp_results(data, search_request.query)
+                        try:
+                            data = await response.json() if response_text else {}
+                            return self.parse_mcp_results(data, search_request.query)
+                        except Exception as parse_error:
+                            logger.error(f"JSON parse error: {parse_error}")
+                            return self.fallback_results(search_request.query)
                     else:
-                        logger.error(f"MCP search failed: {response.status}")
+                        logger.error(f"MCP search failed: {response.status} - {response_text}")
                         return self.fallback_results(search_request.query)
                         
         except Exception as e:
@@ -228,57 +265,78 @@ class MCPClient:
         results = []
         
         try:
-            if "result" in data and "content" in data["result"]:
-                content = data["result"]["content"]
-                if isinstance(content, list) and content:
-                    # Parse structured data from MCP response
-                    raw_content = content[0].get("text", "")
-                    results = self.extract_legal_data(raw_content, query)
+            logger.info(f"Parsing MCP response: {str(data)[:200]}...")
+            
+            if "result" in data and data["result"]:
+                result_data = data["result"]
+                
+                if isinstance(result_data, dict) and "content" in result_data:
+                    content = result_data["content"]
+                    if isinstance(content, list) and content:
+                        # Parse structured data from MCP response
+                        raw_content = content[0].get("text", "") if content[0] else ""
+                        logger.info(f"MCP raw content: {raw_content[:200]}...")
+                        
+                        if raw_content and len(raw_content) > 50:
+                            results = self.extract_legal_data(raw_content, query)
+                            logger.info(f"Extracted {len(results)} results from MCP data")
+                        else:
+                            logger.warning("MCP returned empty or short content")
+                elif isinstance(result_data, str) and result_data:
+                    # Direct text response
+                    results = self.extract_legal_data(result_data, query) 
+                    logger.info(f"Extracted {len(results)} results from direct MCP text")
+                else:
+                    logger.warning(f"Unexpected MCP result format: {type(result_data)}")
+            else:
+                logger.warning("No result field in MCP response")
                     
         except Exception as e:
             logger.error(f"Error parsing MCP results: {e}")
         
-        # Fallback if no results
-        if not results:
-            results = self.fallback_results(query)
-        
-        return results
+        # Return real results or fallback
+        if results:
+            logger.info(f"Returning {len(results)} real MCP results")
+            return results
+        else:
+            logger.info("No real results found, using fallback")
+            return self.fallback_results(query)
     
     def extract_legal_data(self, raw_content: str, query: str) -> List[LegalResult]:
         """Extract structured legal data from MCP response"""
         results = []
         
         try:
-            # Try to parse JSON-like structure
-            if "title" in raw_content.lower() and "court" in raw_content.lower():
-                # More sophisticated parsing logic here
-                # For now, return enhanced sample data
-                results = [
-                    LegalResult(
-                        title=f"Yargıtay Hukuk Genel Kurulu - {query} Kararı",
-                        court="Yargıtay Hukuk Genel Kurulu",
-                        date="2024-07-22",
-                        summary=f"{query} konusunda Yargıtay Hukuk Genel Kurulu tarafından verilen önemli içtihat kararı. Bu karar, benzer davalar için emsal teşkil etmektedir.",
-                        source="Yargıtay MCP - Bedesten Unified API",
-                        document_id="yhgk_2024_001"
-                    ),
-                    LegalResult(
-                        title=f"Danıştay İdari Dava Daireleri - {query} Değerlendirmesi",
-                        court="Danıştay İdari Dava Daireleri Kurulu",
-                        date="2024-07-15",
-                        summary=f"{query} ile ilgili idari hukuk açısından yapılan değerlendirme. Kamu yönetimi ve birey ilişkilerinde temel prensipler.",
-                        source="Danıştay MCP - Bedesten Unified API",
-                        document_id="dank_2024_002"
-                    ),
-                    LegalResult(
-                        title=f"Anayasa Mahkemesi - {query} Norm Denetimi",
-                        court="Anayasa Mahkemesi",
-                        date="2024-06-30",
-                        summary=f"{query} kapsamında Anayasa Mahkemesi tarafından yapılan norm denetim incelemesi. Anayasaya uygunluk değerlendirmesi.",
-                        source="Anayasa Mahkemesi MCP - Unified API",
-                        document_id="aym_2024_003"
-                    )
-                ]
+            # More sophisticated parsing for real MCP data
+            if "başlık" in raw_content.lower() or "karar" in raw_content.lower():
+                # This is likely real legal content
+                lines = raw_content.split('\n')
+                current_result = {}
+                
+                for line in lines:
+                    line = line.strip()
+                    if not line:
+                        continue
+                        
+                    if "başlık:" in line.lower() or "title:" in line.lower():
+                        if current_result.get('title'):
+                            results.append(LegalResult(**current_result))
+                            current_result = {}
+                        current_result['title'] = line.split(':', 1)[1].strip()
+                    elif "mahkeme:" in line.lower() or "court:" in line.lower():
+                        current_result['court'] = line.split(':', 1)[1].strip()
+                    elif "tarih:" in line.lower() or "date:" in line.lower():
+                        current_result['date'] = line.split(':', 1)[1].strip()
+                    elif "özet:" in line.lower() or "summary:" in line.lower():
+                        current_result['summary'] = line.split(':', 1)[1].strip()
+                        current_result['source'] = "Yargı MCP - Real Data"
+                
+                # Add last result
+                if current_result.get('title'):
+                    results.append(LegalResult(**current_result))
+            
+            logger.info(f"Parsed {len(results)} legal results from content")
+                    
         except Exception as e:
             logger.error(f"Error extracting legal data: {e}")
             
@@ -288,15 +346,14 @@ class MCPClient:
         """Fallback results when MCP is not available"""
         return [
             LegalResult(
-                title=f"Gelişmiş Sistem - {query} Arama Sonucu",
-                court="Çok Kaynaklı Arama",
+                title=f"Test Modu - {query} Arama Sonucu",
+                court="MCP Connection Test",
                 date="2024-07-22",
-                summary=f"{query} için gelişmiş arama sistemi aktif. 13 farklı mahkeme ve kurum veritabanında arama yapılmıştır.",
-                source="Yargı MCP - Advanced Search",
-                document_id="advanced_001"
+                summary=f"{query} için MCP bağlantısı test ediliyor. Gerçek veriler yükleniyor...",
+                source="Yargı MCP - Fallback Mode",
+                document_id="fallback_001"
             )
         ]
-
 # Initialize MCP client
 mcp_client = MCPClient()
 
