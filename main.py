@@ -130,19 +130,17 @@ class MCPClient:
             if not court_types:
                 court_types = ["yargitay", "danistay"]
             
-            search_payload = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "id": 3,
-                "params": {
-                    "name": "search_bedesten_unified",
-                    "arguments": {
-                        "phrase": query,
-                        "court_types": court_types,
-                        "limit": limit
-                    }
-                }
-            }
+          search_payload = {
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "id": 3,
+    "params": {
+        "name": "search_bedesten_unified",
+        "arguments": {
+            "phrase": query
+        }
+    }
+}
             
             async with self.session.post(
                 f"{self.base_url}/mcp/",
