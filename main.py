@@ -72,7 +72,7 @@ class MCPClient:
                 timeout=aiohttp.ClientTimeout(total=30)
             ) as response:
                 if response.status == 200:
-                    result = await response.json()
+                    content_type = response.headers.get('content-type', '')
                     # Extract session ID from response headers if available
                     self.session_id = response.headers.get('mcp-session-id', 'default-session')
                     logger.info(f"MCP session initialized: {self.session_id}")
