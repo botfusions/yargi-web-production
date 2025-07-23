@@ -33,14 +33,15 @@ class SearchResponse(BaseModel):
     llm_explanation: Optional[str] = None
 
 class MCPClient:
-    def __init__(self):
-        self.base_url = "https://yargi-mcp.botfusions.com"
-        self.session_id = None
-        self.headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream",  # FIXED: Added this line
-            "Authorization": "Bearer mock_clerk_jwt_development_token_12345"
-        }
+   def __init__(self):
+    self.base_url = "https://yargi-mcp.botfusions.com"
+    self.session_id = "709892fabf6b426a832afdb04f4f7bd0"  # Working session ID!
+    self.headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+        "Authorization": "Bearer mock_clerk_jwt_development_token_12345",
+        "Mcp-Session-Id": "709892fabf6b426a832afdb04f4f7bd0"  # Bu kritik!
+    }
     
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
