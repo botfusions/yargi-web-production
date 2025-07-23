@@ -33,7 +33,6 @@ class SearchResponse(BaseModel):
     llm_explanation: Optional[str] = None
 
 class MCPClient:
-    class MCPClient:
     def __init__(self):
         self.base_url = "https://yargi-mcp.botfusions.com"
         self.session_id = "709892fabf6b426a832afdb04f4f7bd0"
@@ -44,10 +43,10 @@ class MCPClient:
             "Mcp-Session-Id": "709892fabf6b426a832afdb04f4f7bd0"
         }
     
-    async def __aenter__(self):   
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
         await self.initialize_session()
+        return self
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
