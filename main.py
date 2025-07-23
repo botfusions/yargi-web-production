@@ -128,7 +128,7 @@ class MCPClient:
         """Search using bedesten unified API"""
         try:
             # Prepare court types
-            if not court_types:
+             if not court_types:
                 court_types = ["yargitay", "danistay"]
             
           search_payload = {
@@ -142,7 +142,7 @@ class MCPClient:
         }
     }
 }
-            
+                        
             async with self.session.post(
                 f"{self.base_url}/mcp/",
                 headers=self.headers,
