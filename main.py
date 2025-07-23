@@ -133,13 +133,13 @@ class MCPClient:
                 court_types = ["yargitay", "danistay"]
             
           search_payload = {
-    "jsonrpc": "2.0",
-    "method": "tools/call",
-    "id": 3,
-    "params": {
-        "name": "search_bedesten_unified",
-        "arguments": {
-            "phrase": query
+                 "jsonrpc": "2.0",
+                 "method": "tools/call",
+                 "id": 3,
+                 "params": {
+                 "name": "search_bedesten_unified",
+                 "arguments": {
+                 "phrase": query
         }
     }
 }
