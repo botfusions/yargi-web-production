@@ -128,21 +128,38 @@ class MCPClient:
         """Search using bedesten unified API"""
         try:
             # Prepare court types
-             if not court_types:
+            if not court_types:
                 court_types = ["yargitay", "danistay"]
             
-          search_payload = {
-                 "jsonrpc": "2.0",
-                 "method": "tools/call",
-                 "id": 3,
-                 "params": {
-                 "name": "search_bedesten_unified",
-                 "arguments": {
-                 "phrase": query
-        }
-    }
-}
-                        
+            search_payload = {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "id": 3,
+                "params": {
+                    "name": "search_bedesten_unified",
+                    "arguments": {
+                        "phrase": query,
+                        "court_types": court_types,
+                        "limit": limit
+                    }
+                }
+            }
+            
+            async with self.session.post(
+                f"{self.base_url}/mcp/",
+                headers=self.headers,
+                json=search_payload,
+                timeout=aiohttp.ClientTimeout(total=60)
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return result.get("result", {}).get("content", [])
+                else:
+                    logger.error(f"Search failed: HTTP {response.status}")
+                    return None
+        except Exception as e:
+            logger.error(f"Search error: {str(e)}")
+            return None
             async with self.session.post(
                 f"{self.base_url}/mcp/",
                 headers=self.headers,
