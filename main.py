@@ -32,59 +32,24 @@ class SearchResponse(BaseModel):
     status: str
     llm_explanation: Optional[str] = None
 
-def __init__(self):
-    self.base_url = "https://yargi-mcp.botfusions.com"
-    self.session_id = "06ba314b36f549c59286598cf4b856cf"  # YENİ SESSION ID
-    self.headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-        "Authorization": "Bearer mock_clerk_jwt_development_token_12345",
-        "Mcp-Session-Id": "06ba314b36f549c59286598cf4b856cf"  # YENİ SESSION ID
-    }
+class MCPClient:
+    def __init__(self):
+        self.base_url = "https://yargi-mcp.botfusions.com"
+        self.session_id = "06ba314b36f549c59286598cf4b856cf"
+        self.headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "Authorization": "Bearer mock_clerk_jwt_development_token_12345",
+            "Mcp-Session-Id": "06ba314b36f549c59286598cf4b856cf"
+        }
     
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
-        await self.initialize_session()
-        return self
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if hasattr(self, 'session'):
             await self.session.close()
-    
-    async def initialize_session(self):
-        """Initialize MCP session"""
-        try:
-            init_payload = {
-                "jsonrpc": "2.0",
-                "method": "initialize",
-                "id": 1,
-                "params": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}},
-                    "clientInfo": {"name": "yargi-web-client", "version": "1.0.0"}
-                }
-            }
-            
-            async with self.session.post(
-                f"{self.base_url}/mcp/",
-                headers=self.headers,
-                json=init_payload,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as response:
-                if response.status == 200:
-                    content_type = response.headers.get('content-type', '')
-                    # Extract session ID from response headers if available
-                    self.session_id = response.headers.get('mcp-session-id', 'default-session')
-                    logger.info(f"MCP session initialized: {self.session_id}")
-                    return result
-                else:
-                    logger.error(f"Failed to initialize MCP session: {response.status}")
-                    return None
-                    
-        except Exception as e:
-            logger.error(f"MCP initialization error: {str(e)}")
-            return None
     
     async def health_check(self):
         """Check MCP server health"""
@@ -106,7 +71,8 @@ def __init__(self):
             tools_payload = {
                 "jsonrpc": "2.0",
                 "method": "tools/list",
-                "id": 2
+                "id": 2,
+                "params": {}
             }
             
             async with self.session.post(
@@ -126,7 +92,6 @@ def __init__(self):
     async def search_bedesten_unified(self, query: str, court_types: List[str] = None, limit: int = 3):
         """Search using bedesten unified API"""
         try:
-            # Prepare court types
             if not court_types:
                 court_types = ["yargitay", "danistay"]
             
@@ -144,21 +109,6 @@ def __init__(self):
                 }
             }
             
-            async with self.session.post(
-                f"{self.base_url}/mcp/",
-                headers=self.headers,
-                json=search_payload,
-                timeout=aiohttp.ClientTimeout(total=60)
-            ) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    return result.get("result", {}).get("content", [])
-                else:
-                    logger.error(f"Search failed: HTTP {response.status}")
-                    return None
-        except Exception as e:
-            logger.error(f"Search error: {str(e)}")
-            return None
             async with self.session.post(
                 f"{self.base_url}/mcp/",
                 headers=self.headers,
@@ -197,7 +147,6 @@ def get_fallback_results(query: str) -> List[Dict[str, Any]]:
 async def get_ai_explanation(query: str, results: List[Dict]) -> str:
     """Get AI explanation using OpenAI (mock for now)"""
     try:
-        # This would be replaced with actual OpenAI API call
         court_names = [r.get('court', 'Bilinmeyen Mahkeme') for r in results[:2]]
         
         return f"""
@@ -246,7 +195,6 @@ async def health_check():
             "tools_count": 0
         }
 
-# Test endpoint
 @app.get("/test-mcp")
 async def test_mcp():
     """Test MCP connection"""
