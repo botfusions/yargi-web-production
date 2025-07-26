@@ -402,22 +402,45 @@
 
         async function loadApiInfo() {
             try {
-                const [toolsResponse, dbResponse] = await Promise.all([
-                    fetch(`${API_BASE_URL}/api/tools`),
-                    fetch(`${API_BASE_URL}/api/databases`)
-                ]);
-
+                // Load real tools data
+                const toolsResponse = await fetch(`${API_BASE_URL}/api/tools`);
                 if (toolsResponse.ok) {
-                    availableTools = await toolsResponse.json();
-                    document.getElementById('toolCount').textContent = availableTools.length || 21;
+                    const toolsData = await toolsResponse.json();
+                    availableTools = toolsData;
+                    
+                    // Update tool count in UI
+                    const toolCount = Array.isArray(toolsData) ? toolsData.length : 
+                                     (toolsData.tools ? toolsData.tools.length : 21);
+                    document.getElementById('toolCount').textContent = toolCount;
+                    
+                    console.log(`Loaded ${toolCount} MCP tools from API`);
+                } else {
+                    console.warn('Tools endpoint failed, using default count');
                 }
 
+                // Load real database info
+                const dbResponse = await fetch(`${API_BASE_URL}/api/databases`);
                 if (dbResponse.ok) {
-                    databaseInfo = await dbResponse.json();
-                    updateDatabaseInfo();
+                    const dbData = await dbResponse.json();
+                    databaseInfo = dbData;
+                    
+                    // Update database info in UI
+                    if (dbData.databases && Array.isArray(dbData.databases)) {
+                        document.getElementById('dbCount').textContent = dbData.databases.length;
+                        console.log(`Loaded ${dbData.databases.length} databases from API`);
+                        
+                        // Update endpoint count if available
+                        if (dbData.tools_count) {
+                            document.getElementById('endpointCount').textContent = dbData.tools_count;
+                        }
+                    }
+                } else {
+                    console.warn('Database endpoint failed, using default count');
                 }
+
             } catch (error) {
                 console.error('API Info Error:', error);
+                // Keep default values if API calls fail
             }
         }
 
@@ -429,56 +452,56 @@
         }
 
         async function searchDatabase(database, keyword, limit) {
-            if (!apiOnline) {
-                // Return mock data if API is offline
-                return generateMockResults(keyword, limit);
-            }
-
-            try {
-                const requestBody = {
-                    keyword: keyword,
-                    limit: parseInt(limit)
-                };
-
-                // Adjust request body based on database
-                if (database.id === 'yargitay') {
-                    requestBody.arananKelime = keyword;
-                    delete requestBody.keyword;
-                }
-
-                const response = await fetch(`${API_BASE_URL}${database.endpoint}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Search Error:', error);
-                throw error;
-            }
+            // POST endpoints currently have issues (500 errors)
+            // Using mock data strategy until POST endpoints are fixed
+            console.log(`Mock search: ${database.name} - "${keyword}" - ${limit} results`);
+            
+            // Show realistic delay for better UX
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            return generateMockResults(keyword, limit);
         }
 
         function generateMockResults(keyword, limit) {
+            const legalTerms = [
+                'ifa etmek', 'sözleşme ihlali', 'tazminat', 'hukuki sorumluluk', 'temyiz',
+                'karar bozma', 'içtihat', 'emsal karar', 'hukuki değerlendirme', 'mahkeme kararı',
+                'yasal düzenleme', 'kanun hükmü', 'yargılama usulü', 'delil değerlendirmesi'
+            ];
+            
+            const courts = [
+                'Yargıtay 4. Hukuk Dairesi', 'Yargıtay 13. Hukuk Dairesi', 'Yargıtay 9. Hukuk Dairesi',
+                'Danıştay 8. Dairesi', 'Danıştay İdari Dava Daireleri', 'Anayasa Mahkemesi',
+                'Bölge Adliye Mahkemesi', 'Asliye Hukuk Mahkemesi', 'İş Mahkemesi'
+            ];
+
             const mockResults = [];
-            for (let i = 1; i <= limit; i++) {
+            for (let i = 1; i <= parseInt(limit); i++) {
+                const randomTerm = legalTerms[Math.floor(Math.random() * legalTerms.length)];
+                const randomCourt = courts[Math.floor(Math.random() * courts.length)];
+                const year = 2020 + Math.floor(Math.random() * 5);
+                const month = Math.floor(Math.random() * 12) + 1;
+                const day = Math.floor(Math.random() * 28) + 1;
+                
                 mockResults.push({
-                    title: `${keyword} ile ilgili Karar ${i}`,
-                    court: selectedDatabase?.name || 'Test Mahkemesi',
-                    date: new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1).toLocaleDateString('tr-TR'),
-                    summary: `Bu karar ${keyword} konusunda önemli içtihat oluşturmaktadır. Mahkeme bu konuda detaylı değerlendirme yapmış ve sonuca varmıştır.`,
-                    caseNumber: `2024/${Math.floor(Math.random() * 10000) + 1000}`,
-                    status: 'Test Verisi'
+                    title: `${keyword} Konulu ${selectedDatabase?.name || 'Mahkeme'} Kararı ${i}`,
+                    court: randomCourt,
+                    date: new Date(year, month - 1, day).toLocaleDateString('tr-TR'),
+                    summary: `Bu kararda "${keyword}" kavramı ${randomTerm} bağlamında değerlendirilmiş ve mahkeme tarafından detaylı hukuki analiz yapılmıştır. Karar, benzer vakalarda emsal teşkil edecek niteliktedir.`,
+                    caseNumber: `${year}/${Math.floor(Math.random() * 9000) + 1000}`,
+                    status: 'Demo Verisi - POST Endpoints Aktif Değil',
+                    content: `${keyword} ile ilgili bu karar ${randomCourt} tarafından verilmiştir. Karar metni detaylı hukuki değerlendirmeler içermektedir.`,
+                    esasNo: `${year}/${Math.floor(Math.random() * 9000) + 1000}`,
+                    kararNo: `${year}/${Math.floor(Math.random() * 5000) + 1000}`
                 });
             }
-            return { results: mockResults, total: mockResults.length };
+            
+            return { 
+                results: mockResults, 
+                total: mockResults.length,
+                status: 'success',
+                message: `Demo verisi: ${mockResults.length} sonuç (POST endpoints aktif değil)`
+            };
         }
 
         // UI Functions
