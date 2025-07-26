@@ -273,7 +273,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_BASE_URL = 'http://185.170.196.65:8001';
+        const API_BASE_URL = 'http://185.170.196.65:8002';
         
         // Database selection
         let selectedDatabases = ['emsal']; // Default to working database
@@ -334,30 +334,76 @@
             hideResults();
 
             try {
-                // For now, we'll test with health check
-                const response = await fetch(`${API_BASE_URL}/health`);
+                // Get real tools and databases info
+                const [toolsResponse, dbResponse] = await Promise.all([
+                    fetch(`${API_BASE_URL}/api/tools`),
+                    fetch(`${API_BASE_URL}/api/databases`)
+                ]);
                 
-                if (response.ok) {
-                    const data = await response.json();
+                if (toolsResponse.ok && dbResponse.ok) {
+                    const toolsData = await toolsResponse.json();
+                    const dbData = await dbResponse.json();
                     
-                    // Simulate search results for demo
-                    const mockResults = generateMockResults(keyword, limit);
-                    displayResults(mockResults, keyword);
+                    // Show real API data instead of mock
+                    displayRealApiData(keyword, toolsData, dbData, limit);
                     
-                    showMessage(`"${keyword}" için ${mockResults.length} sonuç bulundu.`, 'success');
+                    showMessage(`"${keyword}" için API bilgileri gösteriliyor. (Not: Arama endpoint'leri geçici olarak bakımda)`, 'success');
                 } else {
                     throw new Error('API yanıt vermiyor');
                 }
                 
             } catch (error) {
-                console.error('Arama hatası:', error);
-                showMessage('Arama sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
+                console.error('API hatası:', error);
+                showMessage('API bağlantı hatası. POST endpoint\'leri şu anda çalışmıyor.', 'error');
+                
+                // Fallback to mock data
+                const mockResults = generateMockResults(keyword, limit);
+                displayResults(mockResults, keyword);
             } finally {
                 showLoading(false);
             }
         });
 
-        function generateMockResults(keyword, limit) {
+        function displayRealApiData(keyword, toolsData, dbData, limit) {
+            const container = document.getElementById('resultsContent');
+            
+            const apiInfo = `
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-tools me-2"></i>Mevcut Tools (${toolsData.length})</h5>
+                        <div class="list-group">
+                            ${toolsData.slice(0, 5).map(tool => `
+                                <div class="list-group-item">
+                                    <strong>${tool.name}</strong>
+                                    <small class="text-muted d-block">${tool.description}</small>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-database me-2"></i>Veritabanları</h5>
+                        <div class="list-group">
+                            ${Object.keys(dbData).slice(0, 5).map(dbKey => `
+                                <div class="list-group-item">
+                                    <strong>${dbData[dbKey].name}</strong>
+                                    <small class="text-muted d-block">${dbData[dbKey].description}</small>
+                                    <small class="badge bg-primary">${dbData[dbKey].tools || 0} tools</small>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>API Durumu:</strong> GET endpoint'leri çalışıyor, POST endpoint'leri geliştiriliyor.
+                    <br><strong>Arama terimi:</strong> "${keyword}" - ${limit} sonuç talep edildi.
+                </div>
+            `;
+            
+            container.innerHTML = apiInfo;
+            showResults();
+        }
             const courts = ['Yargıtay', 'Danıştay', 'Anayasa Mahkemesi', 'Emsal'];
             const results = [];
             
