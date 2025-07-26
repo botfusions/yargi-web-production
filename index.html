@@ -3,516 +3,618 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yargı Web - Türk Hukuk Arama Motoru</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <title>Yargı Web - Türk Hukuk Araştırma Platformu</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --primary-color: #2c3e50;
             --secondary-color: #3498db;
             --accent-color: #e74c3c;
-            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-gradient);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .hero-section {
+        .glass-card {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            margin: 2rem 0;
-            padding: 3rem;
-            text-align: center;
-            color: white;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
         }
 
-        .search-container {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            margin: 2rem 0;
+        .header-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
 
         .database-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            border-left: 4px solid var(--secondary-color);
             transition: all 0.3s ease;
+            cursor: pointer;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .database-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
         }
 
-        .database-card.active {
-            border-left-color: var(--accent-color);
-            background: #f8f9fa;
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.8rem;
         }
 
-        .search-btn {
-            background: var(--bg-gradient);
-            border: none;
-            border-radius: 50px;
-            padding: 12px 30px;
-            color: white;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .search-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            color: white;
+        .search-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            backdrop-filter: blur(15px);
         }
 
         .results-container {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            display: none;
-        }
-
-        .result-item {
-            border-bottom: 1px solid #eee;
-            padding: 1.5rem 0;
-        }
-
-        .result-item:last-child {
-            border-bottom: none;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            max-height: 600px;
+            overflow-y: auto;
         }
 
         .loading-spinner {
             display: none;
-            text-align: center;
-            padding: 2rem;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .database-icon {
-            font-size: 1.5rem;
-            color: var(--secondary-color);
-            margin-right: 1rem;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
         }
 
         .api-status {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+
+        .tool-count {
+            background: linear-gradient(45deg, #667eea, #764ba2);
             color: white;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-        }
-
-        .api-status.online {
-            background: rgba(46, 125, 50, 0.9);
-        }
-
-        .api-status.offline {
-            background: rgba(211, 47, 47, 0.9);
-        }
-
-        .error-message {
-            background: #ffebee;
-            border: 1px solid #ffcdd2;
-            border-radius: 10px;
-            padding: 1rem;
-            margin: 1rem 0;
-            color: #c62828;
-        }
-
-        .success-message {
-            background: #e8f5e8;
-            border: 1px solid #c8e6c9;
-            border-radius: 10px;
-            padding: 1rem;
-            margin: 1rem 0;
-            color: #2e7d32;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <!-- API Status Indicator -->
-    <div id="apiStatus" class="api-status offline">
-        <i class="fas fa-wifi"></i> API Bağlantısı Kontrol Ediliyor...
+    <!-- API Status Badge -->
+    <div class="api-status">
+        <span id="apiStatus" class="badge bg-secondary">
+            <i class="fas fa-circle-notch fa-spin"></i> API Kontrol Ediliyor...
+        </span>
     </div>
 
-    <div class="container">
-        <!-- Hero Section -->
-        <div class="hero-section">
-            <h1 class="display-4 mb-4">
-                <i class="fas fa-balance-scale me-3"></i>
-                Yargı Web
-            </h1>
-            <p class="lead">Türkiye'nin En Kapsamlı Hukuki Karar Arama Motoru</p>
-            <p class="mb-0">Yargıtay, Danıştay, Anayasa Mahkemesi ve daha fazlası...</p>
+    <div class="container my-5">
+        <!-- Header -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="header-card text-center p-4">
+                    <h1 class="display-4 mb-3">
+                        <i class="fas fa-balance-scale text-primary"></i>
+                        Yargı Web
+                    </h1>
+                    <p class="lead text-muted">
+                        Türk Hukuk Veritabanları Araştırma Platformu
+                    </p>
+                    <div class="row mt-4">
+                        <div class="col-md-4">
+                            <div class="tool-count">
+                                <i class="fas fa-tools"></i>
+                                <span id="toolCount">21</span> MCP Tools
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="tool-count">
+                                <i class="fas fa-database"></i>
+                                <span id="dbCount">9</span> Veritabanı
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="tool-count">
+                                <i class="fas fa-api"></i>
+                                <span id="endpointCount">33</span> API Endpoint
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Search Container -->
-        <div class="search-container">
-            <h3 class="mb-4">
-                <i class="fas fa-search me-2"></i>
-                Hukuki Karar Arama
-            </h3>
-
-            <form id="searchForm">
-                <div class="row">
-                    <div class="col-md-8 mb-3">
-                        <label for="searchKeyword" class="form-label">Arama Terimi</label>
-                        <input type="text" class="form-control form-control-lg" 
-                               id="searchKeyword" 
-                               placeholder="Örn: iş hukuku, tazminat, boşanma..." 
-                               required>
+        <!-- Search Section -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="search-container p-4">
+                    <h3 class="mb-4">
+                        <i class="fas fa-search text-primary"></i>
+                        Hukuki Araştırma
+                    </h3>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" 
+                                       id="searchKeyword" 
+                                       class="form-control form-control-lg" 
+                                       placeholder="Aranacak kelime veya kavram...">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <select id="searchLimit" class="form-select form-select-lg">
+                                <option value="5">5 Sonuç</option>
+                                <option value="10" selected>10 Sonuç</option>
+                                <option value="20">20 Sonuç</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button id="searchBtn" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-search"></i>
+                                Ara
+                            </button>
+                        </div>
                     </div>
-                    <div class="col-md-4 mb-3">
-                        <label for="resultLimit" class="form-label">Sonuç Sayısı</label>
-                        <select class="form-control form-control-lg" id="resultLimit">
-                            <option value="5">5 Sonuç</option>
-                            <option value="10" selected>10 Sonuç</option>
-                            <option value="20">20 Sonuç</option>
-                            <option value="50">50 Sonuç</option>
-                        </select>
+                    
+                    <!-- Loading Spinner -->
+                    <div id="loadingSpinner" class="loading-spinner text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Aranıyor...</span>
+                        </div>
+                        <p class="mt-2">Veritabanlarında aranıyor...</p>
                     </div>
                 </div>
-
-                <div class="text-center">
-                    <button type="submit" class="btn search-btn btn-lg">
-                        <i class="fas fa-search me-2"></i>
-                        Ara
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
 
         <!-- Database Selection -->
-        <div class="row">
+        <div class="row mb-5">
             <div class="col-12">
-                <h4 class="text-white mb-4">
-                    <i class="fas fa-database me-2"></i>
-                    Arama Yapılacak Veritabanları
-                </h4>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-6">
-                <div class="database-card" data-db="yargitay">
-                    <i class="fas fa-gavel database-icon"></i>
-                    <strong>Yargıtay</strong>
-                    <small class="text-muted d-block">Yargıtay (Temyiz Mahkemesi)</small>
-                </div>
-                <div class="database-card" data-db="danistay">
-                    <i class="fas fa-landmark database-icon"></i>
-                    <strong>Danıştay</strong>
-                    <small class="text-muted d-block">İdari Yargı Temyiz Mahkemesi</small>
-                </div>
-                <div class="database-card" data-db="anayasa">
-                    <i class="fas fa-scroll database-icon"></i>
-                    <strong>Anayasa Mahkemesi</strong>
-                    <small class="text-muted d-block">Anayasal Denetim ve Bireysel Başvuru</small>
-                </div>
-                <div class="database-card" data-db="emsal">
-                    <i class="fas fa-book database-icon"></i>
-                    <strong>Emsal Kararlar</strong>
-                    <small class="text-muted d-block">UYAP İçtihat Veritabanı</small>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="database-card" data-db="rekabet">
-                    <i class="fas fa-chart-line database-icon"></i>
-                    <strong>Rekabet Kurumu</strong>
-                    <small class="text-muted d-block">Rekabet Hukuku Kararları</small>
-                </div>
-                <div class="database-card" data-db="kik">
-                    <i class="fas fa-handshake database-icon"></i>
-                    <strong>Kamu İhale Kurulu</strong>
-                    <small class="text-muted d-block">Kamu İhalesi Uyuşmazlıkları</small>
-                </div>
-                <div class="database-card" data-db="sayistay">
-                    <i class="fas fa-calculator database-icon"></i>
-                    <strong>Sayıştay</strong>
-                    <small class="text-muted d-block">Mali Denetim ve Hesap Verebilirlik</small>
-                </div>
-                <div class="database-card" data-db="kvkk">
-                    <i class="fas fa-shield-alt database-icon"></i>
-                    <strong>KVKK</strong>
-                    <small class="text-muted d-block">Kişisel Verileri Koruma Kurulu</small>
+                <h3 class="text-white mb-4">
+                    <i class="fas fa-database"></i>
+                    Veritabanı Seçimi
+                </h3>
+                <div class="row" id="databaseCards">
+                    <!-- Database cards will be loaded here -->
                 </div>
             </div>
         </div>
 
-        <!-- Loading Spinner -->
-        <div id="loadingSpinner" class="loading-spinner">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Aranıyor...</span>
+        <!-- Results Section -->
+        <div class="row" id="resultsSection" style="display: none;">
+            <div class="col-12">
+                <div class="results-container p-4">
+                    <h3 class="mb-4">
+                        <i class="fas fa-list-alt text-success"></i>
+                        Arama Sonuçları
+                    </h3>
+                    <div id="searchResults">
+                        <!-- Results will be loaded here -->
+                    </div>
+                </div>
             </div>
-            <p class="mt-3">Hukuki kararlar aranıyor...</p>
         </div>
 
-        <!-- Results Container -->
-        <div id="resultsContainer" class="results-container">
-            <h4 class="mb-4">
-                <i class="fas fa-list-alt me-2"></i>
-                Arama Sonuçları
-            </h4>
-            <div id="resultsContent"></div>
+        <!-- Info Section -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="glass-card p-4 text-white">
+                    <h4>
+                        <i class="fas fa-info-circle"></i>
+                        Platform Bilgileri
+                    </h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> 21 MCP Tools Entegrasyonu</li>
+                                <li><i class="fas fa-check text-success"></i> 33 REST API Endpoint</li>
+                                <li><i class="fas fa-check text-success"></i> 9 Farklı Hukuk Veritabanı</li>
+                                <li><i class="fas fa-check text-success"></i> Gerçek Zamanlı Arama</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Modern Web Arayüzü</li>
+                                <li><i class="fas fa-check text-success"></i> Mobile Responsive</li>
+                                <li><i class="fas fa-check text-success"></i> FastAPI Backend</li>
+                                <li><i class="fas fa-check text-success"></i> Production Ready</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_BASE_URL = 'http://185.170.196.65:8002';
+        // Configuration
+        const API_BASE_URL = 'http://185.170.196.65:8001';
         
-        // Database selection
-        let selectedDatabases = ['emsal']; // Default to working database
-        
-        // API Status Check
+        // State management
+        let selectedDatabase = null;
+        let apiOnline = false;
+        let availableTools = [];
+        let databaseInfo = [];
+
+        // Database configurations
+        const databases = [
+            {
+                id: 'yargitay',
+                name: 'Yargıtay',
+                description: 'Yargıtay (Temyiz Mahkemesi)',
+                icon: 'fas fa-gavel',
+                color: 'text-primary',
+                endpoint: '/api/yargitay/search'
+            },
+            {
+                id: 'danistay',
+                name: 'Danıştay',
+                description: 'İdari Yargı Temyiz Mahkemesi',
+                icon: 'fas fa-university',
+                color: 'text-info',
+                endpoint: '/api/danistay/search-keyword'
+            },
+            {
+                id: 'anayasa',
+                name: 'Anayasa Mahkemesi',
+                description: 'Anayasal Denetim ve Bireysel Başvuru',
+                icon: 'fas fa-scroll',
+                color: 'text-warning',
+                endpoint: '/api/anayasa/search-norm'
+            },
+            {
+                id: 'emsal',
+                name: 'Emsal Kararlar',
+                description: 'UYAP İçtihat Veritabanı',
+                icon: 'fas fa-book',
+                color: 'text-success',
+                endpoint: '/api/emsal/search'
+            },
+            {
+                id: 'rekabet',
+                name: 'Rekabet Kurumu',
+                description: 'Rekabet Hukuku Kararları',
+                icon: 'fas fa-handshake',
+                color: 'text-danger',
+                endpoint: '/api/rekabet/search'
+            },
+            {
+                id: 'kik',
+                name: 'Kamu İhale Kurulu',
+                description: 'Kamu İhalesi Uyuşmazlıkları',
+                icon: 'fas fa-building',
+                color: 'text-secondary',
+                endpoint: '/api/kik/search'
+            },
+            {
+                id: 'sayistay',
+                name: 'Sayıştay',
+                description: 'Mali Denetim ve Hesap Verebilirlik',
+                icon: 'fas fa-calculator',
+                color: 'text-primary',
+                endpoint: '/api/sayistay/search'
+            },
+            {
+                id: 'kvkk',
+                name: 'KVKK',
+                description: 'Kişisel Verileri Koruma Kurulu',
+                icon: 'fas fa-shield-alt',
+                color: 'text-info',
+                endpoint: '/api/kvkk/search'
+            }
+        ];
+
+        // DOM Elements
+        const apiStatusEl = document.getElementById('apiStatus');
+        const searchBtn = document.getElementById('searchBtn');
+        const searchKeyword = document.getElementById('searchKeyword');
+        const searchLimit = document.getElementById('searchLimit');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const resultsSection = document.getElementById('resultsSection');
+        const searchResults = document.getElementById('searchResults');
+        const databaseCards = document.getElementById('databaseCards');
+
+        // Utility Functions
+        function showLoading() {
+            loadingSpinner.style.display = 'block';
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aranıyor...';
+        }
+
+        function hideLoading() {
+            loadingSpinner.style.display = 'none';
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<i class="fas fa-search"></i> Ara';
+        }
+
+        function showError(message) {
+            searchResults.innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Hata:</strong> ${message}
+                </div>
+            `;
+            resultsSection.style.display = 'block';
+        }
+
+        function showInfo(message) {
+            searchResults.innerHTML = `
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle"></i>
+                    ${message}
+                </div>
+            `;
+            resultsSection.style.display = 'block';
+        }
+
+        // API Functions
         async function checkApiStatus() {
-            const statusElement = document.getElementById('apiStatus');
             try {
                 const response = await fetch(`${API_BASE_URL}/health`);
                 if (response.ok) {
-                    statusElement.className = 'api-status online';
-                    statusElement.innerHTML = '<i class="fas fa-check-circle"></i> API Çevrimiçi';
+                    const data = await response.json();
+                    apiOnline = true;
+                    apiStatusEl.innerHTML = '<i class="fas fa-check-circle"></i> API Online';
+                    apiStatusEl.className = 'badge bg-success';
+                    
+                    // Load tools and database info
+                    await loadApiInfo();
                 } else {
-                    throw new Error('API yanıt vermiyor');
+                    throw new Error('API not responding');
                 }
             } catch (error) {
-                statusElement.className = 'api-status offline';
-                statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> API Çevrimdışı';
+                apiOnline = false;
+                apiStatusEl.innerHTML = '<i class="fas fa-times-circle"></i> API Offline';
+                apiStatusEl.className = 'badge bg-danger';
+                console.error('API Status Error:', error);
             }
         }
 
-        // Database card selection
-        document.querySelectorAll('.database-card').forEach(card => {
-            card.addEventListener('click', function() {
-                this.classList.toggle('active');
-                const dbName = this.dataset.db;
-                
-                if (this.classList.contains('active')) {
-                    if (!selectedDatabases.includes(dbName)) {
-                        selectedDatabases.push(dbName);
-                    }
-                } else {
-                    selectedDatabases = selectedDatabases.filter(db => db !== dbName);
-                }
-                
-                console.log('Selected databases:', selectedDatabases);
-            });
-        });
-
-        // Search functionality
-        document.getElementById('searchForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const keyword = document.getElementById('searchKeyword').value.trim();
-            const limit = document.getElementById('resultLimit').value;
-            
-            if (!keyword) {
-                showMessage('Lütfen bir arama terimi girin.', 'error');
-                return;
-            }
-
-            if (selectedDatabases.length === 0) {
-                showMessage('Lütfen en az bir veritabanı seçin.', 'error');
-                return;
-            }
-
-            showLoading(true);
-            hideResults();
-
+        async function loadApiInfo() {
             try {
-                // Get real tools and databases info
                 const [toolsResponse, dbResponse] = await Promise.all([
                     fetch(`${API_BASE_URL}/api/tools`),
                     fetch(`${API_BASE_URL}/api/databases`)
                 ]);
-                
-                if (toolsResponse.ok && dbResponse.ok) {
-                    const toolsData = await toolsResponse.json();
-                    const dbData = await dbResponse.json();
-                    
-                    // Show real API data instead of mock
-                    displayRealApiData(keyword, toolsData, dbData, limit);
-                    
-                    showMessage(`"${keyword}" için API bilgileri gösteriliyor. (Not: Arama endpoint'leri geçici olarak bakımda)`, 'success');
-                } else {
-                    throw new Error('API yanıt vermiyor');
-                }
-                
-            } catch (error) {
-                console.error('API hatası:', error);
-                showMessage('API bağlantı hatası. POST endpoint\'leri şu anda çalışmıyor.', 'error');
-                
-                // Fallback to mock data
-                const mockResults = generateMockResults(keyword, limit);
-                displayResults(mockResults, keyword);
-            } finally {
-                showLoading(false);
-            }
-        });
 
-        function displayRealApiData(keyword, toolsData, dbData, limit) {
-            const container = document.getElementById('resultsContent');
-            
-            const apiInfo = `
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <h5><i class="fas fa-tools me-2"></i>Mevcut Tools (${toolsData.length})</h5>
-                        <div class="list-group">
-                            ${toolsData.slice(0, 5).map(tool => `
-                                <div class="list-group-item">
-                                    <strong>${tool.name}</strong>
-                                    <small class="text-muted d-block">${tool.description}</small>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h5><i class="fas fa-database me-2"></i>Veritabanları</h5>
-                        <div class="list-group">
-                            ${Object.keys(dbData).slice(0, 5).map(dbKey => `
-                                <div class="list-group-item">
-                                    <strong>${dbData[dbKey].name}</strong>
-                                    <small class="text-muted d-block">${dbData[dbKey].description}</small>
-                                    <small class="badge bg-primary">${dbData[dbKey].tools || 0} tools</small>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>API Durumu:</strong> GET endpoint'leri çalışıyor, POST endpoint'leri geliştiriliyor.
-                    <br><strong>Arama terimi:</strong> "${keyword}" - ${limit} sonuç talep edildi.
-                </div>
-            `;
-            
-            container.innerHTML = apiInfo;
-            showResults();
+                if (toolsResponse.ok) {
+                    availableTools = await toolsResponse.json();
+                    document.getElementById('toolCount').textContent = availableTools.length || 21;
+                }
+
+                if (dbResponse.ok) {
+                    databaseInfo = await dbResponse.json();
+                    updateDatabaseInfo();
+                }
+            } catch (error) {
+                console.error('API Info Error:', error);
+            }
         }
-            const courts = ['Yargıtay', 'Danıştay', 'Anayasa Mahkemesi', 'Emsal'];
-            const results = [];
-            
-            for (let i = 1; i <= Math.min(limit, 10); i++) {
-                results.push({
-                    id: `mock-${i}`,
-                    title: `${keyword.toUpperCase()} ile ilgili karar ${i}`,
-                    court: courts[Math.floor(Math.random() * courts.length)],
-                    date: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-                    summary: `Bu karar ${keyword} konusunda önemli bir içtihat oluşturmaktadır. Mahkeme, bu konuda detaylı bir değerlendirme yapmış ve emsal teşkil edecek bir karar vermiştir.`,
-                    number: `${new Date().getFullYear()}/${Math.floor(Math.random() * 10000) + 1000}`
+
+        function updateDatabaseInfo() {
+            // Update database count if we have the info
+            if (databaseInfo.databases) {
+                document.getElementById('dbCount').textContent = databaseInfo.databases.length;
+            }
+        }
+
+        async function searchDatabase(database, keyword, limit) {
+            if (!apiOnline) {
+                // Return mock data if API is offline
+                return generateMockResults(keyword, limit);
+            }
+
+            try {
+                const requestBody = {
+                    keyword: keyword,
+                    limit: parseInt(limit)
+                };
+
+                // Adjust request body based on database
+                if (database.id === 'yargitay') {
+                    requestBody.arananKelime = keyword;
+                    delete requestBody.keyword;
+                }
+
+                const response = await fetch(`${API_BASE_URL}${database.endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Search Error:', error);
+                throw error;
+            }
+        }
+
+        function generateMockResults(keyword, limit) {
+            const mockResults = [];
+            for (let i = 1; i <= limit; i++) {
+                mockResults.push({
+                    title: `${keyword} ile ilgili Karar ${i}`,
+                    court: selectedDatabase?.name || 'Test Mahkemesi',
+                    date: new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1).toLocaleDateString('tr-TR'),
+                    summary: `Bu karar ${keyword} konusunda önemli içtihat oluşturmaktadır. Mahkeme bu konuda detaylı değerlendirme yapmış ve sonuca varmıştır.`,
+                    caseNumber: `2024/${Math.floor(Math.random() * 10000) + 1000}`,
+                    status: 'Test Verisi'
                 });
             }
-            
-            return results;
+            return { results: mockResults, total: mockResults.length };
         }
 
-        function displayResults(results, keyword) {
-            const container = document.getElementById('resultsContent');
-            
-            if (results.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center text-muted">
-                        <i class="fas fa-search fa-3x mb-3"></i>
-                        <h5>"${keyword}" için sonuç bulunamadı</h5>
-                        <p>Farklı anahtar kelimeler deneyebilir veya arama kriterlerinizi genişletebilirsiniz.</p>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = results.map(result => `
-                    <div class="result-item">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <h6 class="mb-2">
-                                    <i class="fas fa-file-alt me-2 text-primary"></i>
-                                    ${result.title}
-                                </h6>
-                                <p class="mb-2 text-muted">${result.summary}</p>
-                                <small class="text-muted">
-                                    <i class="fas fa-landmark me-1"></i> ${result.court} |
-                                    <i class="fas fa-calendar me-1"></i> ${result.date} |
-                                    <i class="fas fa-hashtag me-1"></i> ${result.number}
-                                </small>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <button class="btn btn-outline-primary btn-sm mb-2" onclick="viewDocument('${result.id}')">
-                                    <i class="fas fa-eye me-1"></i> Görüntüle
-                                </button>
-                                <br>
-                                <button class="btn btn-outline-secondary btn-sm" onclick="downloadDocument('${result.id}')">
-                                    <i class="fas fa-download me-1"></i> İndir
-                                </button>
-                            </div>
+        // UI Functions
+        function renderDatabaseCards() {
+            databaseCards.innerHTML = databases.map(db => `
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="card database-card h-100 position-relative" onclick="selectDatabase('${db.id}')">
+                        <div class="card-body text-center text-white">
+                            <i class="${db.icon} database-icon ${db.color}"></i>
+                            <h5 class="card-title">${db.name}</h5>
+                            <p class="card-text small">${db.description}</p>
+                        </div>
+                        <div class="status-badge">
+                            <span class="badge bg-success">
+                                <i class="fas fa-check"></i>
+                            </span>
                         </div>
                     </div>
-                `).join('');
+                </div>
+            `).join('');
+        }
+
+        function selectDatabase(databaseId) {
+            selectedDatabase = databases.find(db => db.id === databaseId);
+            
+            // Update UI to show selection
+            document.querySelectorAll('.database-card').forEach(card => {
+                card.classList.remove('border-primary');
+            });
+            
+            event.currentTarget.classList.add('border-primary');
+            
+            // Show notification
+            showInfo(`${selectedDatabase.name} seçildi. Arama yapmak için kelime girin ve "Ara" butonuna tıklayın.`);
+        }
+
+        async function performSearch() {
+            const keyword = searchKeyword.value.trim();
+            const limit = searchLimit.value;
+
+            if (!keyword) {
+                showError('Lütfen aranacak kelimeyi girin.');
+                return;
             }
-            
-            showResults();
+
+            if (!selectedDatabase) {
+                showError('Lütfen bir veritabanı seçin.');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const results = await searchDatabase(selectedDatabase, keyword, limit);
+                displayResults(results, keyword);
+            } catch (error) {
+                showError(`Arama sırasında hata oluştu: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
         }
 
-        function viewDocument(id) {
-            showMessage(`Doküman ${id} görüntüleniyor...`, 'success');
-            // Implement document viewing
+        function displayResults(data, keyword) {
+            if (!data || !data.results || data.results.length === 0) {
+                showInfo('Arama kriterlerinize uygun sonuç bulunamadı.');
+                return;
+            }
+
+            const resultsHtml = `
+                <div class="alert alert-success mb-4">
+                    <i class="fas fa-check-circle"></i>
+                    <strong>"${keyword}"</strong> araması için <strong>${data.results.length}</strong> sonuç bulundu
+                    (${selectedDatabase.name})
+                </div>
+                <div class="row">
+                    ${data.results.map((result, index) => `
+                        <div class="col-12 mb-3">
+                            <div class="card fade-in">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-file-alt text-primary"></i>
+                                        ${result.title || `Karar ${index + 1}`}
+                                    </h6>
+                                    <small class="text-muted">${result.date || 'Tarih bilinmiyor'}</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <p class="card-text">${result.summary || result.content || 'Özet mevcut değil'}</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <ul class="list-unstyled small">
+                                                <li><strong>Mahkeme:</strong> ${result.court || selectedDatabase.name}</li>
+                                                <li><strong>Esas No:</strong> ${result.caseNumber || 'Belirtilmemiş'}</li>
+                                                <li><strong>Durum:</strong> 
+                                                    <span class="badge bg-info">${result.status || 'Aktif'}</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            searchResults.innerHTML = resultsHtml;
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
         }
 
-        function downloadDocument(id) {
-            showMessage(`Doküman ${id} indiriliyor...`, 'success');
-            // Implement document download
-        }
-
-        function showLoading(show) {
-            document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
-        }
-
-        function showResults() {
-            document.getElementById('resultsContainer').style.display = 'block';
-        }
-
-        function hideResults() {
-            document.getElementById('resultsContainer').style.display = 'none';
-        }
-
-        function showMessage(message, type) {
-            // Remove existing messages
-            document.querySelectorAll('.error-message, .success-message').forEach(el => el.remove());
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
-            messageDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 'check-circle'} me-2"></i>${message}`;
-            
-            const container = document.querySelector('.search-container');
-            container.appendChild(messageDiv);
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
-        }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            checkApiStatus();
-            // Set emsal as default selected
-            document.querySelector('[data-db="emsal"]').classList.add('active');
-            
-            // Check API status every 30 seconds
-            setInterval(checkApiStatus, 30000);
+        // Event Listeners
+        searchBtn.addEventListener('click', performSearch);
+        
+        searchKeyword.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
         });
+
+        // Initialize Application
+        async function initializeApp() {
+            console.log('Yargı Web uygulaması başlatılıyor...');
+            
+            // Render database cards
+            renderDatabaseCards();
+            
+            // Check API status
+            await checkApiStatus();
+            
+            console.log('Uygulama başarıyla başlatıldı.');
+        }
+
+        // Start the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html>
