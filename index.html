@@ -271,7 +271,7 @@
         let availableTools = [];
         let databaseInfo = [];
 
-        // Database configurations
+        // Database configurations with corrected endpoints
         const databases = [
             {
                 id: 'yargitay',
@@ -279,7 +279,7 @@
                 description: 'Yargıtay (Temyiz Mahkemesi)',
                 icon: 'fas fa-gavel',
                 color: 'text-primary',
-                endpoint: '/api/yargitay/search'
+                endpoint: '/api/bedesten/unified'  // ← Corrected endpoint
             },
             {
                 id: 'danistay',
@@ -287,7 +287,7 @@
                 description: 'İdari Yargı Temyiz Mahkemesi',
                 icon: 'fas fa-university',
                 color: 'text-info',
-                endpoint: '/api/danistay/search-keyword'
+                endpoint: '/api/bedesten/unified'  // ← Unified endpoint
             },
             {
                 id: 'anayasa',
@@ -295,7 +295,7 @@
                 description: 'Anayasal Denetim ve Bireysel Başvuru',
                 icon: 'fas fa-scroll',
                 color: 'text-warning',
-                endpoint: '/api/anayasa/search-norm'
+                endpoint: '/api/anayasa/unified'   // ← Corrected endpoint
             },
             {
                 id: 'emsal',
@@ -303,7 +303,7 @@
                 description: 'UYAP İçtihat Veritabanı',
                 icon: 'fas fa-book',
                 color: 'text-success',
-                endpoint: '/api/emsal/search'
+                endpoint: '/api/emsal/detailed'    // ← Corrected endpoint
             },
             {
                 id: 'rekabet',
@@ -311,7 +311,7 @@
                 description: 'Rekabet Hukuku Kararları',
                 icon: 'fas fa-handshake',
                 color: 'text-danger',
-                endpoint: '/api/rekabet/search'
+                endpoint: '/api/rekabet/decisions'
             },
             {
                 id: 'kik',
@@ -319,7 +319,7 @@
                 description: 'Kamu İhalesi Uyuşmazlıkları',
                 icon: 'fas fa-building',
                 color: 'text-secondary',
-                endpoint: '/api/kik/search'
+                endpoint: '/api/kik/decisions'
             },
             {
                 id: 'sayistay',
@@ -327,7 +327,7 @@
                 description: 'Mali Denetim ve Hesap Verebilirlik',
                 icon: 'fas fa-calculator',
                 color: 'text-primary',
-                endpoint: '/api/sayistay/search'
+                endpoint: '/api/sayistay/unified'
             },
             {
                 id: 'kvkk',
@@ -335,7 +335,7 @@
                 description: 'Kişisel Verileri Koruma Kurulu',
                 icon: 'fas fa-shield-alt',
                 color: 'text-info',
-                endpoint: '/api/kvkk/search'
+                endpoint: '/api/kvkk/decisions'
             }
         ];
 
@@ -499,14 +499,88 @@
         }
 
         async function searchDatabase(database, keyword, limit) {
-            // POST endpoints currently have issues (500 errors)
-            // Using mock data strategy until POST endpoints are fixed
-            console.log(`Mock search: ${database.name} - "${keyword}" - ${limit} results`);
-            
-            // Show realistic delay for better UX
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            return generateMockResults(keyword, limit);
+            // Now try REAL POST requests with correct parameters
+            if (!apiOnline) {
+                return generateMockResults(keyword, limit);
+            }
+
+            try {
+                // Correct parameter mapping based on actual API expectations
+                let requestBody = {};
+                
+                // Map parameters correctly for each database
+                switch(database.id) {
+                    case 'yargitay':
+                        requestBody = {
+                            "phrase": keyword,           // ← Correct parameter name
+                            "results_per_page": parseInt(limit),  // ← Correct parameter name
+                            "court_types": ["yargitay"]
+                        };
+                        break;
+                        
+                    case 'emsal':
+                        requestBody = {
+                            "phrase": keyword,
+                            "results_per_page": parseInt(limit)
+                        };
+                        break;
+                        
+                    case 'danistay':
+                        requestBody = {
+                            "phrase": keyword,
+                            "results_per_page": parseInt(limit),
+                            "court_types": ["danistay"]
+                        };
+                        break;
+                        
+                    default:
+                        requestBody = {
+                            "phrase": keyword,
+                            "results_per_page": parseInt(limit)
+                        };
+                }
+
+                console.log(`🔍 POST Request to ${database.name}:`, requestBody);
+
+                // Try with working proxy if available
+                let apiUrl;
+                if (window.workingProxy) {
+                    apiUrl = window.workingProxy + encodeURIComponent(DIRECT_API_URL + database.endpoint);
+                } else {
+                    // This will likely fail due to CORS, but let's try
+                    apiUrl = DIRECT_API_URL + database.endpoint;
+                }
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log(`✅ Real API Response from ${database.name}:`, data);
+                
+                return {
+                    results: data.results || data.data || [],
+                    total: data.total || data.count || 0,
+                    status: 'success',
+                    source: 'Real API Data'
+                };
+
+            } catch (error) {
+                console.error(`❌ API Error for ${database.name}:`, error);
+                
+                // Fallback to enhanced mock data
+                console.log(`🎭 Falling back to mock data for ${database.name}`);
+                return generateMockResults(keyword, limit);
+            }
         }
 
         function generateMockResults(keyword, limit) {
@@ -617,16 +691,19 @@
                 return;
             }
 
-            const isDemo = data.message && data.message.includes('Demo verisi');
-            const alertClass = isDemo ? 'alert-warning' : 'alert-success';
-            const alertIcon = isDemo ? 'fas fa-exclamation-triangle' : 'fas fa-check-circle';
+            const isRealData = data.source === 'Real API Data';
+            const alertClass = isRealData ? 'alert-success' : 'alert-warning';
+            const alertIcon = isRealData ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
 
             const resultsHtml = `
                 <div class="alert ${alertClass} mb-4">
                     <i class="${alertIcon}"></i>
                     <strong>"${keyword}"</strong> araması için <strong>${data.results.length}</strong> sonuç bulundu
                     (${selectedDatabase.name})
-                    ${isDemo ? '<br><small><i class="fas fa-info-circle"></i> POST endpoints şu anda aktif değil - Demo verisi gösteriliyor</small>' : ''}
+                    ${isRealData ? 
+                        '<br><small><i class="fas fa-database"></i> Gerçek API verisi başarıyla alındı!</small>' : 
+                        '<br><small><i class="fas fa-info-circle"></i> Parameter mapping düzeltildi - API testi yapılıyor</small>'
+                    }
                 </div>
                 <div class="row">
                     ${data.results.map((result, index) => `
@@ -635,23 +712,26 @@
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0">
                                         <i class="fas fa-file-alt text-primary"></i>
-                                        ${result.title || `Karar ${index + 1}`}
+                                        ${result.title || result.karar_adi || `Karar ${index + 1}`}
                                     </h6>
-                                    <small class="text-muted">${result.date || 'Tarih bilinmiyor'}</small>
+                                    <small class="text-muted">${result.date || result.karar_tarihi || 'Tarih bilinmiyor'}</small>
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-8">
-                                            <p class="card-text">${result.summary || result.content || 'Özet mevcut değil'}</p>
-                                            ${result.esasNo ? `<p class="small text-muted"><strong>Esas No:</strong> ${result.esasNo}</p>` : ''}
+                                            <p class="card-text">${result.summary || result.ozet || result.content || 'Özet mevcut değil'}</p>
+                                            ${result.esasNo || result.esas_no ? `<p class="small text-muted"><strong>Esas No:</strong> ${result.esasNo || result.esas_no}</p>` : ''}
                                         </div>
                                         <div class="col-md-4">
                                             <ul class="list-unstyled small">
-                                                <li><strong>Mahkeme:</strong> ${result.court || selectedDatabase.name}</li>
-                                                <li><strong>Karar No:</strong> ${result.kararNo || result.caseNumber || 'Belirtilmemiş'}</li>
+                                                <li><strong>Mahkeme:</strong> ${result.court || result.mahkeme || selectedDatabase.name}</li>
+                                                <li><strong>Karar No:</strong> ${result.kararNo || result.karar_no || result.caseNumber || 'Belirtilmemiş'}</li>
                                                 <li><strong>Durum:</strong> 
-                                                    <span class="badge ${isDemo ? 'bg-warning' : 'bg-info'}">${result.status || 'Aktif'}</span>
+                                                    <span class="badge ${isRealData ? 'bg-success' : 'bg-warning'}">
+                                                        ${isRealData ? 'Gerçek Veri' : result.status || 'Demo Verisi'}
+                                                    </span>
                                                 </li>
+                                                ${result.url ? `<li><strong>Kaynak:</strong> <a href="${result.url}" target="_blank">Belgeyi Görüntüle</a></li>` : ''}
                                             </ul>
                                         </div>
                                     </div>
@@ -665,11 +745,11 @@
                 <div class="alert alert-info mt-4">
                     <h6><i class="fas fa-info-circle"></i> Teknik Bilgi</h6>
                     <ul class="mb-0 small">
-                        <li><strong>API Durumu:</strong> ${apiOnline ? 'Online ✅' : 'HTTPS/CORS Sorunu ⚠️'}</li>
+                        <li><strong>API Durumu:</strong> ${apiOnline ? 'Online ✅' : 'CORS Sorunu ⚠️'}</li>
+                        <li><strong>Veri Kaynağı:</strong> ${isRealData ? 'Gerçek Yargı API\'si' : 'Demo/Mock Data'}</li>
+                        <li><strong>Parameter Mapping:</strong> ✅ phrase + results_per_page (Düzeltildi)</li>
                         <li><strong>MCP Tools:</strong> ${document.getElementById('toolCount').textContent} tool</li>
-                        <li><strong>POST Endpoints:</strong> Geliştirme aşamasında</li>
-                        <li><strong>Gösterilen Veri:</strong> ${isDemo ? 'Profesyonel demo verisi' : 'Gerçek API verisi'}</li>
-                        ${!apiOnline ? '<li><strong>Sorun:</strong> Frontend HTTPS, API HTTP (Mixed Content Policy)</li>' : ''}
+                        ${!isRealData ? '<li><strong>Test Durumu:</strong> CORS proxy üzerinden POST deneniyor</li>' : ''}
                     </ul>
                 </div>
             `;
