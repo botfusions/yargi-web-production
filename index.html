@@ -257,9 +257,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Configuration
-        const API_BASE_URL = 'https://cors-anywhere.herokuapp.com/http://185.170.196.65:8001';
-        const DIRECT_API_URL = 'http://185.170.196.65:8001'; // Fallback
+        // Configuration - Alternative CORS solutions
+        const API_PROXIES = [
+            'https://api.allorigins.win/raw?url=',
+            'https://cors-proxy.htmldriven.com/?url=',
+            'https://thingproxy.freeboard.io/fetch/'
+        ];
+        const DIRECT_API_URL = 'http://185.170.196.65:8001';
         
         // State management
         let selectedDatabase = null;
@@ -381,50 +385,72 @@
         // API Functions
         async function checkApiStatus() {
             try {
-                // Try CORS proxy first
-                let response;
-                try {
-                    response = await fetch(`${API_BASE_URL}/health`);
-                } catch (corsError) {
-                    console.log('CORS proxy failed, using direct API (will show mixed content warning)');
-                    // Fallback to direct API (will show mixed content warning but might work)
-                    response = await fetch(`${DIRECT_API_URL}/health`, { mode: 'no-cors' });
+                // Try multiple CORS proxies
+                let response = null;
+                let successProxy = null;
+                
+                for (const proxy of API_PROXIES) {
+                    try {
+                        console.log(`Trying proxy: ${proxy}`);
+                        const proxyUrl = proxy + encodeURIComponent(DIRECT_API_URL + '/health');
+                        response = await fetch(proxyUrl);
+                        
+                        if (response.ok) {
+                            successProxy = proxy;
+                            console.log(`✅ Successful proxy: ${proxy}`);
+                            break;
+                        }
+                    } catch (proxyError) {
+                        console.log(`❌ Proxy failed: ${proxy}`, proxyError.message);
+                        continue;
+                    }
                 }
 
-                if (response.ok) {
+                if (response && response.ok && successProxy) {
                     const data = await response.json();
                     apiOnline = true;
-                    apiStatusEl.innerHTML = '<i class="fas fa-check-circle"></i> API Online';
+                    apiStatusEl.innerHTML = '<i class="fas fa-check-circle"></i> API Online (via Proxy)';
                     apiStatusEl.className = 'badge bg-success';
+                    
+                    // Store successful proxy for future use
+                    window.workingProxy = successProxy;
                     
                     // Load tools and database info
                     await loadApiInfo();
                 } else {
-                    throw new Error('API not responding');
+                    throw new Error('All CORS proxies failed');
                 }
             } catch (error) {
                 apiOnline = false;
-                apiStatusEl.innerHTML = '<i class="fas fa-times-circle"></i> API Offline (HTTPS/CORS Issue)';
+                apiStatusEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Demo Mode (CORS Blocked)';
                 apiStatusEl.className = 'badge bg-warning';
                 
                 // Show user-friendly message
                 showInfo(`
-                    <strong>API Bağlantı Sorunu:</strong><br>
-                    • API HTTP üzerinde, site HTTPS üzerinde<br>
-                    • Browser güvenlik politikası engelliyor<br>
-                    • Demo modunda çalışıyoruz<br>
-                    <small class="text-muted">Teknik detay: Mixed Content Policy</small>
+                    <strong>Demo Modunda Çalışıyoruz:</strong><br>
+                    • CORS proxy servisleri engellenmiş durumda<br>
+                    • API HTTP, Frontend HTTPS (Mixed Content)<br>
+                    • Tüm özellikler demo verisiyle test edilebilir<br>
+                    <small class="text-muted">Çözüm: API'yi HTTPS'e upgrade etmek</small>
                 `);
                 
-                console.error('API Status Error:', error);
+                console.log('All proxies failed, running in demo mode');
             }
         }
 
         async function loadApiInfo() {
             try {
-                // Try to load real tools data with CORS handling
+                // Only try if we have a working proxy
+                if (!window.workingProxy) {
+                    console.log('No working proxy available, using defaults');
+                    return;
+                }
+
+                // Try to load real tools data
                 try {
-                    const toolsResponse = await fetch(`${API_BASE_URL}/api/tools`);
+                    const toolsUrl = window.workingProxy + encodeURIComponent(DIRECT_API_URL + '/api/tools');
+                    const toolsResponse = await fetch(toolsUrl);
+                    
                     if (toolsResponse.ok) {
                         const toolsData = await toolsResponse.json();
                         availableTools = toolsData;
@@ -432,22 +458,24 @@
                         const toolCount = Array.isArray(toolsData) ? toolsData.length : 
                                          (toolsData.tools ? toolsData.tools.length : 21);
                         document.getElementById('toolCount').textContent = toolCount;
-                        console.log(`Loaded ${toolCount} MCP tools from API`);
+                        console.log(`✅ Loaded ${toolCount} MCP tools from API`);
                     }
                 } catch (toolsError) {
-                    console.log('Tools API failed (CORS), using default count');
+                    console.log('Tools API failed, using default count');
                 }
 
-                // Try to load real database info with CORS handling
+                // Try to load real database info
                 try {
-                    const dbResponse = await fetch(`${API_BASE_URL}/api/databases`);
+                    const dbUrl = window.workingProxy + encodeURIComponent(DIRECT_API_URL + '/api/databases');
+                    const dbResponse = await fetch(dbUrl);
+                    
                     if (dbResponse.ok) {
                         const dbData = await dbResponse.json();
                         databaseInfo = dbData;
                         
                         if (dbData.databases && Array.isArray(dbData.databases)) {
                             document.getElementById('dbCount').textContent = dbData.databases.length;
-                            console.log(`Loaded ${dbData.databases.length} databases from API`);
+                            console.log(`✅ Loaded ${dbData.databases.length} databases from API`);
                         }
                         
                         if (dbData.tools_count) {
@@ -455,12 +483,11 @@
                         }
                     }
                 } catch (dbError) {
-                    console.log('Database API failed (CORS), using default count');
+                    console.log('Database API failed, using default count');
                 }
 
             } catch (error) {
                 console.error('API Info Error:', error);
-                // Keep default values if API calls fail
             }
         }
 
